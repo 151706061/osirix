@@ -29,7 +29,7 @@
     while( [[NSFileManager defaultManager] fileExistsAtPath: trashPath])
         trashPath = [originalTrashPath stringByAppendingFormat: @" %d", i++];
         
-	BOOL success = [[NSFileManager defaultManager] moveItemAtPath:path toPath:trashPath error:&error];
+    [[NSFileManager defaultManager] moveItemAtPath:path toPath:trashPath error:&error];
 }
 
 -(NSString*)findSystemFolderOfType:(int)folderType forDomain:(int)domain {
@@ -75,7 +75,7 @@
 	if( dirPath == nil) return nil;
 	NSString* parentDirPath = [dirPath stringByDeletingLastPathComponent];
     
-	if (![dirPath isEqual:parentDirPath])
+	if (![dirPath isEqualToString:parentDirPath])
 		[self confirmDirectoryAtPath:parentDirPath subDirectory: YES];
     
 	BOOL isDir, create = NO;

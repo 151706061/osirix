@@ -168,7 +168,7 @@ static NSMatrix *gDateMatrix = nil;
         {
             if( [[d objectForKey: @"date"] intValue] == 0 && [[d objectForKey: @"modality"] count] == 0)
             {
-                NSRunInformationalAlertPanel( NSLocalizedString( @"Filter", nil), [NSString stringWithFormat: NSLocalizedString( @"The Smart Album filter (%@) needs to have at least one parameter defined to be activated: date or modality.", nil), [d objectForKey: @"name"]], NSLocalizedString( @"OK", nil), nil, nil);
+                NSRunInformationalAlertPanel( NSLocalizedString( @"Filter", nil), NSLocalizedString( @"The Smart Album filter (%@) needs to have at least one parameter defined to be activated: date or modality.", nil), NSLocalizedString( @"OK", nil), nil, nil, [d objectForKey: @"name"]);
                 
                 [self willChangeValueForKey: @"smartAlbumsArray"];
                 [d setValue: [NSNumber numberWithBool: NO] forKey: @"activated"];
@@ -216,10 +216,8 @@ static NSMatrix *gDateMatrix = nil;
 	[super dealloc];
 }
 
-- (void) mainViewDidLoad
+- (void) willSelect
 {
-	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    
     // Smart Albums
     NSMutableArray *savedSmartAlbums = [NSMutableArray array];
     
@@ -227,16 +225,18 @@ static NSMatrix *gDateMatrix = nil;
     for( NSDictionary *d in [[NSUserDefaults standardUserDefaults] objectForKey: @"smartAlbumStudiesDICOMNodes"])
         [savedSmartAlbums addObject: [NSMutableDictionary dictionaryWithDictionary: d]];
     
+    [self willChangeValueForKey: @"smartAlbumsArray"];
+    
     self.smartAlbumsArray = savedSmartAlbums;
     
-    [self willChangeValueForKey: @"smartAlbumsArray"];
-    [[DicomDatabase activeLocalDatabase] lock];
     @try
     {
         NSFetchRequest *dbRequest = [[[NSFetchRequest alloc] init] autorelease];
         [dbRequest setEntity: [[DicomDatabase activeLocalDatabase] entityForName: @"Album"]];
         [dbRequest setPredicate: [NSPredicate predicateWithFormat: @"smartAlbum == YES"]];
         NSError *error = nil;
+        
+        [albumDBArray release];
         
         albumDBArray = [[[DicomDatabase activeLocalDatabase] managedObjectContext] executeFetchRequest:dbRequest error:&error];
         albumDBArray = [albumDBArray sortedArrayUsingDescriptors: [NSArray arrayWithObject: [NSSortDescriptor sortDescriptorWithKey: @"name" ascending: YES]]];
@@ -265,6 +265,8 @@ static NSMatrix *gDateMatrix = nil;
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"1", @"date", [NSArray arrayWithObject:@"CR"], @"modality", nil]];
                 else if( [album.name isEqualToString: NSLocalizedString( @"Today XA", nil)])
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"1", @"date", [NSArray arrayWithObject:@"XA"], @"modality", nil]];
+                else if( [album.name isEqualToString: NSLocalizedString( @"Today RF", nil)])
+                    [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"1", @"date", [NSArray arrayWithObject:@"RF"], @"modality", nil]];
                 
                 else if( [album.name isEqualToString: NSLocalizedString( @"Yesterday MR", nil)])
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"2", @"date", [NSArray arrayWithObject:@"MR"], @"modality", nil]];
@@ -278,6 +280,8 @@ static NSMatrix *gDateMatrix = nil;
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"2", @"date", [NSArray arrayWithObject:@"CR"], @"modality", nil]];
                 else if( [album.name isEqualToString: NSLocalizedString( @"Yesterday XA", nil)])
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"2", @"date", [NSArray arrayWithObject:@"XA"], @"modality", nil]];
+                else if( [album.name isEqualToString: NSLocalizedString( @"Yesterday RF", nil)])
+                    [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: YES], @"activated", album.name, @"name", @"2", @"date", [NSArray arrayWithObject:@"RF"], @"modality", nil]];
                 
                 else
                     [self.smartAlbumsArray addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool: NO], @"activated", album.name, @"name", @"0", @"date", [NSArray array], @"modality", nil]];
@@ -298,21 +302,24 @@ static NSMatrix *gDateMatrix = nil;
     {
         N2LogExceptionWithStackTrace(e);
     }
-    [[DicomDatabase activeLocalDatabase] unlock];
     [self didChangeValueForKey: @"smartAlbumsArray"];
     
+    // History
+    [sourcesArray release];
+    sourcesArray = [[[NSUserDefaults standardUserDefaults] objectForKey: @"comparativeSearchDICOMNodes"] mutableCopy];
+    if( sourcesArray == nil)
+        sourcesArray = [[NSMutableArray array] retain];
+    
+    [self refreshSources];
+}
+
+- (void) mainViewDidLoad
+{
     [smartAlbumsTable setDoubleAction: @selector(editSmartAlbumFilter:)];
     [smartAlbumsTable setTarget: self];
     
-    // History
-    
-    sourcesArray = [[[NSUserDefaults standardUserDefaults] objectForKey: @"comparativeSearchDICOMNodes"] mutableCopy];
-    if( sourcesArray == nil) sourcesArray = [[NSMutableArray array] retain];
-    
     [sourcesTable setDoubleAction: @selector(selectUniqueSource:)];
     
-    [self refreshSources];
-	
 	for( NSUInteger i = 0; i < [sourcesArray count]; i++)
 	{
 		if( [[[sourcesArray objectAtIndex: i] valueForKey:@"activated"] boolValue] == YES)

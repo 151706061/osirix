@@ -20,10 +20,6 @@
 #include <CommonCrypto/CommonDigest.h>
 
 
-NSString* N2NonNullString(NSString* s) {
-	return s? s : @"";
-}
-
 @implementation NSString (N2)
 
 - (NSString *)stringByTruncatingToLength:(NSInteger)theWidth
@@ -61,12 +57,12 @@ NSString* N2NonNullString(NSString* s) {
         return [NSString stringWithFormat:NSLocalizedString(@"%i bytes", nil), size];
     float floatSize = float(size) / 1024;
     if (floatSize<1023)
-        return [NSString stringWithFormat:NSLocalizedString(@"%1.2f KB", nil), floatSize];
+        return [NSString stringWithFormat:NSLocalizedString(@"%1.2f KB", @"KB = kilo bytes"), floatSize];
     floatSize = floatSize / 1024;
     if (floatSize<1023)
-        return [NSString stringWithFormat:NSLocalizedString(@"%1.2f MB", nil), floatSize];
+        return [NSString stringWithFormat:NSLocalizedString(@"%1.2f MB", @"MB = mega bytes"), floatSize];
     floatSize = floatSize / 1024;
-    return [NSString stringWithFormat:NSLocalizedString(@"%1.2f GB", nil), floatSize];
+    return [NSString stringWithFormat:NSLocalizedString(@"%1.2f GB", @"GB = giga bytes"), floatSize];
 }
 
 +(NSString*)timeString:(NSTimeInterval)time {
@@ -199,7 +195,7 @@ NSString* N2NonNullString(NSString* s) {
 
 -(NSString*)stringByPrefixingLinesWithString:(NSString*)prefix {
 	NSMutableArray* lines = [[[self componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] mutableCopy] autorelease];
-	if ([[lines lastObject] isEqual:@""]) [lines removeLastObject];	
+	if ([[lines lastObject] isEqualToString:@""]) [lines removeLastObject];
 	return [NSString stringWithFormat:@"%@%@\n", prefix, [lines componentsJoinedByString:[NSString stringWithFormat:@"\n%@", prefix]]];
 }
 
@@ -344,7 +340,7 @@ NSString* N2NonNullString(NSString* s) {
 //	// Process all remaining components.
 //	for (NSString *component in pathComponents)
 //	{
-//		if ([component isEqual:@".."])
+//		if ([component isEqualToString:@".."])
 //			resolvedPath = [resolvedPath stringByDeletingLastPathComponent];
 //		else {
 //			resolvedPath = [resolvedPath stringByAppendingPathComponent:component];

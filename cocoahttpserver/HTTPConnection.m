@@ -733,7 +733,7 @@ static NSMutableArray *recentNonces;
 		}
 	}
 	
-	CFHTTPMessageRef response;
+	CFHTTPMessageRef response = nil;
 	
 	if(!isRangeRequest)
 	{
@@ -766,7 +766,7 @@ static NSMutableArray *recentNonces;
 	// If they issue a 'HEAD' command, we don't have to include the file
 	// If they issue a 'GET' command, we need to include the file
 	
-	if([method isEqual:@"HEAD"] || isZeroLengthResponse)
+	if([method isEqualToString:@"HEAD"] || isZeroLengthResponse)
 	{
 		NSData *responseData = [self preprocessResponse:response];
 		[asyncSocket writeData:responseData withTimeout:WRITE_HEAD_TIMEOUT tag:HTTP_RESPONSE];
@@ -863,7 +863,8 @@ static NSMutableArray *recentNonces;
 		}
 	}
 	
-	CFRelease(response);
+    if( response)
+        CFRelease(response);
 }
 
 /**

@@ -30,9 +30,9 @@
 	
 	DCMSequenceAttribute *sequence = [DCMSequenceAttribute sequenceAttributeWithName:@"ConceptNameCodeSequence"];
 	DCMObject *dcmObject = [DCMObject dcmObject];
-	[dcmObject setAttributeValues:[NSArray arrayWithObject:codeValue] forName:@"CodeValue"];
-	[dcmObject setAttributeValues:[NSArray arrayWithObject:csd] forName:@"CodingSchemeDesignator"];
-	[dcmObject setAttributeValues:[NSArray arrayWithObject:cm] forName:@"CodeMeaning"];
+	[dcmObject setAttributeValues:[NSMutableArray arrayWithObject:codeValue] forName:@"CodeValue"];
+	[dcmObject setAttributeValues:[NSMutableArray arrayWithObject:csd] forName:@"CodingSchemeDesignator"];
+	[dcmObject setAttributeValues:[NSMutableArray arrayWithObject:cm] forName:@"CodeMeaning"];
 	[sequence addItem:dcmObject];
 	
 	return sequence;	
@@ -171,8 +171,18 @@
 	return 0xFFFFFFFF;	
 }
 
+- (NSString *)readableDescription{
+	NSString *sequenceDescription =  [super readableDescription];
+    
+	NSEnumerator *enumerator = [sequenceItems objectEnumerator];
+	NSString *string;
+	while ((string = [[(NSDictionary *)[enumerator nextObject] objectForKey:@"item"] readableDescription]))
+		sequenceDescription = [NSString stringWithFormat:@"%@\n\t%@", sequenceDescription, string];
+	return sequenceDescription;
+}
+
 - (NSString *)description{
-	NSString *sequenceDescription =  [super description];;
+	NSString *sequenceDescription =  [super description];
 	//NSString *description = [super description];
 	NSEnumerator *enumerator = [sequenceItems objectEnumerator];
 	NSString *string;

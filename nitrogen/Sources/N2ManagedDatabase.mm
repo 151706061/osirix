@@ -17,8 +17,10 @@
 #import "N2Debug.h"
 #import "NSFileManager+N2.h"
 #import "NSException+N2.h"
-
+#import "DCMTKQueryNode.h"
 //#import "DicomDatabase.h" // for debug purposes, REMOVE
+
+static int gTotalN2ManagedObjectContext = 0;
 
 @interface N2ManagedDatabase ()
 
@@ -33,28 +35,39 @@
 
 @synthesize database = _database;
 
--(id)init
+-(id)initWithDatabase: (N2ManagedDatabase*) db
 {
     self = [super init];
     
-    [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector( N2ManagedDatabaseDealloced:) name: @"N2ManagedDatabaseDealloced" object: nil];
+    _database = db;
+    [[NSNotificationCenter defaultCenter] addObserver: self selector: @selector( N2ManagedDatabaseDealloced:) name: @"N2ManagedDatabaseDealloced" object: db];
+    
+#ifndef NDEBUG
+    gTotalN2ManagedObjectContext++;
+    
+    if( gTotalN2ManagedObjectContext > 10)
+        NSLog( @"-- gTotalN2ManagedObjectContext = %d", gTotalN2ManagedObjectContext);
+#endif
     
     return self;
 }
 
 -(void)N2ManagedDatabaseDealloced:(NSNotification*) n
 {
-    if( n.object == self.database)
-        self.database = nil;
+    if( n.object != _database)
+        N2LogStackTrace( @"******* N2ManagedDatabaseDealloced");
+    _database = nil;
 }
 
 -(void)dealloc {
 #ifndef NDEBUG
     [_database checkForCorrectContextThread: self];
+    
+    gTotalN2ManagedObjectContext--;
 #endif
     [NSNotificationCenter.defaultCenter removeObserver:self];
-	self.database = nil;
-	[super dealloc];
+	_database = nil;
+	[super dealloc]; //test if db is deallocated
 }
 
 -(BOOL)save:(NSError**)error {
@@ -251,10 +264,9 @@
     if( sqlFilePath.length == 0)
         return nil;
     
-    N2ManagedObjectContext* moc = [[[N2ManagedObjectContext alloc] init] autorelease];
+    N2ManagedObjectContext* moc = [[[N2ManagedObjectContext alloc] initWithDatabase: self] autorelease];
     //	NSLog(@"---------- NEW %@ at %@", moc, sqlFilePath);
 	moc.undoManager = nil;
-	moc.database = self;
 	
     //	NSMutableDictionary* persistentStoreCoordinatorsDictionary = self.persistentStoreCoordinatorsDictionary;
 	
@@ -297,31 +309,42 @@
                     do { // try 2 times
                         ++i;
                         
-                        NSError* err = NULL;
-                        NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:[self migratePersistentStoresAutomatically]], NSMigratePersistentStoresAutomaticallyOption, [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, NULL];
+                        NSError* err = nil;
+                        NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithBool:[self migratePersistentStoresAutomatically]], NSMigratePersistentStoresAutomaticallyOption, [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
                         NSURL* url = [NSURL fileURLWithPath:sqlFilePath];
                         @try {
-                            pStore = [persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:NULL URL:url options:options error:&err];
+                            pStore = [persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:url options:options error:&err];
                         } @catch (...) {
                         }
                         
                         if (!pStore && i == 1)
                         {
                             NSLog(@"Error: [N2ManagedDatabase contextAtPath:] %@", [err description]);
-                            if ([NSThread isMainThread]) NSRunCriticalAlertPanel( [NSString stringWithFormat:NSLocalizedString(@"%@ Storage Error", nil), [self className]], [NSString stringWithFormat: @"%@\r\r%@", err.localizedDescription, sqlFilePath], NSLocalizedString(@"OK", NULL), NULL, NULL);
+                            if ([NSThread isMainThread]) {
+                                NSInteger result = NSRunCriticalAlertPanel( [NSString stringWithFormat:NSLocalizedString(@"%@ Storage Error", nil), [self className]], @"%@\r\r%@\r\r%@", NSLocalizedString(@"Continue", nil), NSLocalizedString(@"Delete the SQL index", nil), nil, err.localizedDescription, sqlFilePath, NSLocalizedString(@"I could delete the SQL index file to reset it.", nil));
+                                
+                                if( result == NSAlertAlternateReturn) {
+                                    NSInteger result = NSRunCriticalAlertPanel( [NSString stringWithFormat:NSLocalizedString(@"%@ Storage Error", nil), [self className]], @"%@\r\r%@", NSLocalizedString(@"Cancel", nil), NSLocalizedString(@"Delete", nil), nil, NSLocalizedString( @"Do you confirm to delete this index file? This operation cannot be undone.", nil), sqlFilePath);
+                                    
+                                    if( result == NSAlertAlternateReturn) {
+                                        [NSFileManager.defaultManager removeItemAtPath:sqlFilePath error: nil];
+                                        i = 0;
+                                    }
+                                }
+                            }
                             
-                            // error = [NSError osirixErrorWithCode:0 underlyingError:error localizedDescriptionFormat:NSLocalizedString(@"Store Configuration Failure: %@", NULL), error.localizedDescription? error.localizedDescription : NSLocalizedString(@"Unknown Error", NULL)];
+                            // error = [NSError osirixErrorWithCode:0 underlyingError:error localizedDescriptionFormat:NSLocalizedString(@"Store Configuration Failure: %@", nil), error.localizedDescription? error.localizedDescription : NSLocalizedString(@"Unknown Error", nil)];
                             
                             // delete the old file... for the Database.sql model ONLY(Dont do this for the WebUser db)
                             if( self.deleteSQLFileIfOpeningFailed)
-                                [NSFileManager.defaultManager removeItemAtPath:sqlFilePath error:NULL];
+                                [NSFileManager.defaultManager removeItemAtPath:sqlFilePath error:nil];
                         }
                     } while (!pStore && i < 2);
                     
                     // Save the models for forward compatibility with old OsiriX versions that don't know the current model
                     NSString *modelsPath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent: [[self class] modelName]];
                     [[NSFileManager defaultManager] removeItemAtPath: localModelsPath error: nil];
-                    [[NSFileManager defaultManager] copyItemAtPath:modelsPath toPath:localModelsPath error:NULL];
+                    [[NSFileManager defaultManager] copyItemAtPath:modelsPath toPath:localModelsPath error:nil];
 
                 }
                 
@@ -488,7 +511,13 @@
             // nothing, just avoid all other checks for performance
         } else if ([oid isKindOfClass:[NSManagedObject class]]) {
             oid = [oid objectID];
-        } else if ([oid isKindOfClass:[NSURL class]]) {
+        }
+#ifndef OSIRIX_LIGHT
+        else if ([oid isKindOfClass:[DCMTKQueryNode class]]) {
+            return oid;
+        }
+#endif
+        else if ([oid isKindOfClass:[NSURL class]]) {
             oid = [self.managedObjectContext.persistentStoreCoordinator managedObjectIDForURIRepresentation:oid];
         } else if ([oid isKindOfClass:[NSString class]]) {
             oid = [self.managedObjectContext.persistentStoreCoordinator managedObjectIDForURIRepresentation:[NSURL URLWithString:oid]];
@@ -548,6 +577,10 @@
 }
 
 -(NSArray*)objectsForEntity:(id)e predicate:(NSPredicate*)p error:(NSError**)error {
+    return [self objectsForEntity:e predicate:p error:error fetchLimit:0 sortDescriptors:nil];
+}
+
+-(NSArray*)objectsForEntity:(id)e predicate:(NSPredicate*)p error:(NSError**)error fetchLimit:(NSUInteger)fetchLimit sortDescriptors:(NSArray*)sortDescriptors{
 	[self _entity:&e];
     
 #ifndef NDEBUG
@@ -557,6 +590,9 @@
     NSFetchRequest* req = [[[NSFetchRequest alloc] init] autorelease];
 	req.entity = e;
 	req.predicate = p? p : [NSPredicate predicateWithValue:YES];
+    req.sortDescriptors = sortDescriptors;
+    if( fetchLimit>0)
+        req.fetchLimit = fetchLimit;
     
     [self.managedObjectContext lock];
     @try {

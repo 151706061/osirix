@@ -14,10 +14,10 @@
 
 
 #import "OSIGeneralPreferencePanePref.h"
-#import <OsiriXAPI/NSPreferencePane+OsiriX.h>
-#import <OsiriXAPI/AppController.h>
-#import <OsiriXAPI/DefaultsOsiriX.h>
-#import <OsiriXAPI/N2Debug.h>
+#import <NSPreferencePane+OsiriX.h>
+#import <AppController.h>
+#import <DefaultsOsiriX.h>
+#import <N2Debug.h>
 
 static NSArray *languagesToMoveWhenQuitting = nil;
 
@@ -47,13 +47,27 @@ static NSArray *languagesToMoveWhenQuitting = nil;
         for( NSString *file in [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [[NSBundle mainBundle] resourcePath] error: nil])
         {
             if( [[file pathExtension] isEqualToString: @"lproj"])
-                [languages addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys: [file stringByDeletingPathExtension], @"language", [NSNumber numberWithBool: YES], @"active", nil]];
+            {
+                NSString *name = [[NSLocale currentLocale] displayNameForKey:NSLocaleIdentifier value: [file stringByDeletingPathExtension]];
+                
+                if( name.length == 0)
+                    name = [file stringByDeletingPathExtension];
+                
+                [languages addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys: [file stringByDeletingPathExtension], @"foldername", name, @"language", [NSNumber numberWithBool: YES], @"active", nil]];
+            }
         }
         
         for( NSString *file in [[NSFileManager defaultManager] contentsOfDirectoryAtPath: [[[[NSBundle mainBundle] resourcePath] stringByDeletingLastPathComponent] stringByAppendingPathComponent: @"Resources Disabled"] error: nil])
         {
             if( [[file pathExtension] isEqualToString: @"lproj"])
-                [languages addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys: [file stringByDeletingPathExtension], @"language", [NSNumber numberWithBool: NO], @"active", nil]];
+            {
+                NSString *name = [[NSLocale currentLocale] displayNameForKey:NSLocaleIdentifier value: [file stringByDeletingPathExtension]];
+                
+                if( name.length == 0)
+                    name = [file stringByDeletingPathExtension];
+                
+                [languages addObject: [NSMutableDictionary dictionaryWithObjectsAndKeys: [file stringByDeletingPathExtension], @"foldername", name, @"language", [NSNumber numberWithBool: NO], @"active", nil]];
+            }
         }
         
 		NSNib *nib = [[[NSNib alloc] initWithNibNamed: @"OSIGeneralPreferencePanePref" bundle: nil] autorelease];
@@ -92,13 +106,6 @@ static NSArray *languagesToMoveWhenQuitting = nil;
 	if( val == 1) // Kakadu
 	{
 		[[NSUserDefaults standardUserDefaults] setBool: YES forKey: @"UseKDUForJPEG2000"];
-		[[NSUserDefaults standardUserDefaults] setBool: YES forKey: @"UseOpenJpegForJPEG2000"];
-	}
-	
-	if( val == 0) // OpenJPEG
-	{
-		[[NSUserDefaults standardUserDefaults] setBool: NO forKey: @"UseKDUForJPEG2000"];
-		[[NSUserDefaults standardUserDefaults] setBool: YES forKey: @"UseOpenJpegForJPEG2000"];
 	}
 	
 	[self willChangeValueForKey: @"JP2KWriter"];
@@ -110,22 +117,7 @@ static NSArray *languagesToMoveWhenQuitting = nil;
 
 - (NSUInteger) JP2KEngine
 {
-	if( [AppController isKDUEngineAvailable] == 1 && [[NSUserDefaults standardUserDefaults] boolForKey: @"UseKDUForJPEG2000"])
-	{
-		return 1; // Kakadu
-	}
-	
-	if( [AppController isKDUEngineAvailable] == 0 && [[NSUserDefaults standardUserDefaults] boolForKey: @"UseKDUForJPEG2000"])
-	{
-		return 0; // OpenJPEG
-	}
-	
-	if( [[NSUserDefaults standardUserDefaults] boolForKey: @"UseOpenJpegForJPEG2000"])
-	{
-		return 0; // OpenJPEG
-	}
-	
-	return 0; // OpenJPEG
+    return 1;
 }
 
 - (IBAction) resetPreferences: (id) sender
@@ -167,7 +159,7 @@ static NSArray *languagesToMoveWhenQuitting = nil;
 
 + (void) errorMessage:(NSURL*) url
 {
-    NSRunAlertPanel( NSLocalizedString( @"Preferences", nil), [NSString stringWithFormat: NSLocalizedString( @"Failed to download and synchronize preferences from this URL: %@", nil), url.absoluteString], NSLocalizedString( @"OK", nil), nil, nil);
+    NSRunAlertPanel( NSLocalizedString( @"Preferences", nil), NSLocalizedString( @"Failed to download and synchronize preferences from this URL: %@", nil), NSLocalizedString( @"OK", nil), nil, nil, url.absoluteString);
 }
 
 + (void) addPreferencesFromURL: (NSURL*) url
@@ -297,7 +289,7 @@ static NSArray *languagesToMoveWhenQuitting = nil;
     
     for( NSDictionary *d in languagesToMoveWhenQuitting)
     {
-        NSString *language = [[d valueForKey: @"language"] stringByAppendingPathExtension: @"lproj"];
+        NSString *language = [[d valueForKey: @"foldername"] stringByAppendingPathExtension: @"lproj"];
         
         if( [[d valueForKey: @"active"] boolValue])
         {

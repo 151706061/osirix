@@ -22,6 +22,14 @@ static float backgroundInset = 1.5;
     return self;
 }
 
+-(id)copyWithZone:(NSZone *)zone {
+    KBDelayedPopUpButtonCell* copy = [super copyWithZone:zone];
+    
+    copy->arrowPath = [self.arrowPath copyWithZone:zone];
+    
+    return copy;
+}
+
 -(void)dealloc
 {
     [arrowPath release];
@@ -244,10 +252,9 @@ static float backgroundInset = 1.5;
 	
 	// Also set menu form representation -
     // This is used in the toolbar overflow menu but also, more importantly, to display a menu in text-only mode.
-	NSMenuItem *menuFormRep = [[NSMenuItem alloc] initWithTitle:[self label] action:nil keyEquivalent:@""];
+	NSMenuItem *menuFormRep = [[[NSMenuItem alloc] initWithTitle:[self label] action:nil keyEquivalent:@""] autorelease];
 	[menuFormRep setSubmenu:menu];
 	[self setMenuFormRepresentation:menuFormRep];
-	[menuFormRep release];
 }
 
 - (NSMenu *)menu
@@ -311,7 +318,7 @@ static float backgroundInset = 1.5;
 {
 	// First, make sure the toolbar image size fits the toolbar size mode; there must be a better place to do this!
 	NSToolbarSizeMode sizeMode = [[self toolbar] sizeMode];
-	float imgWidth = [[self image] size].width;
+//	float imgWidth = [[self image] size].width;
 	
 	if (sizeMode == NSToolbarSizeModeSmall)
 	{

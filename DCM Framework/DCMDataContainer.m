@@ -162,6 +162,7 @@ void signal_EXC(int sig_num)
 		if (![self determineTransferSyntax])
         {
 			[dicomData release];
+            [self autorelease];
             return nil;
         }
 	}
@@ -188,6 +189,7 @@ void signal_EXC(int sig_num)
 		if (![self determineTransferSyntax])
 		{
             [dicomData release];
+            [self autorelease];
             return nil;
         }
 	}
@@ -201,6 +203,7 @@ void signal_EXC(int sig_num)
 		if (![self determineTransferSyntax])
 		{
             [dicomData release];
+            [self autorelease];
             return nil;
         }
 	}

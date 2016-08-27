@@ -26,8 +26,8 @@
 		self.altImage = inAltImage;
 	
 	self.gradientType = NSGradientNone;
-	self.bezelStyle = 0;
-	
+//	self.bezelStyle = 0;
+
 	return self;
 }
 
@@ -44,6 +44,20 @@
 }
 
 -(void)drawBezelWithFrame:(NSRect)frame inView:(NSView*)controlView {
+}
+
+- (void) dealloc
+{
+    self.altImage = nil;
+    [super dealloc];
+}
+
+-(id)copyWithZone:(NSZone *)zone {
+    N2ImageButtonCell* copy = [super copyWithZone:zone];
+    
+    copy->altImage = [self.altImage copyWithZone:zone];
+    
+    return copy;
 }
 
 @end

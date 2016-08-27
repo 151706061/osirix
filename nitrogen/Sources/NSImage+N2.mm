@@ -18,6 +18,7 @@
 #import <Accelerate/Accelerate.h>
 #import "N2Operators.h"
 #import "NSColor+N2.h"
+#import "N2Debug.h"
 #import <QuartzCore/QuartzCore.h>
 
 @implementation N2Image
@@ -220,6 +221,22 @@ end_size_y:
 	return [image autorelease];
 }
 
+-(NSImage*)imageInverted {
+    CIFilter *invert = [CIFilter filterWithName: @"CIColorMatrix"];
+    
+    [invert setDefaults];
+    [invert setValue: [CIImage imageWithData:[self TIFFRepresentation]] forKey: kCIInputImageKey];
+    [invert setValue: [CIVector vectorWithX: -1 Y:0 Z:0] forKey: @"inputRVector"];
+    [invert setValue: [CIVector vectorWithX: 0 Y:-1 Z:0] forKey: @"inputGVector"];
+    [invert setValue: [CIVector vectorWithX: 0 Y:0 Z:-1] forKey: @"inputBVector"];
+    [invert setValue: [CIVector vectorWithX: 0.9 Y:0.9 Z:0.9] forKey:@"inputBiasVector"];
+    
+	NSImageRep *rep = [NSCIImageRep imageRepWithCIImage: [invert valueForKey:@"outputImage"]];
+	NSImage *image = [[NSImage alloc] initWithSize:[rep size]];
+	[image addRepresentation:rep];
+	return [image autorelease];
+}
+
 -(NSSize)sizeByScalingProportionallyToSize:(NSSize)targetSize {
     return N2ProportionallyScaleSize(self.size, targetSize);
 }
@@ -228,6 +245,75 @@ end_size_y:
     NSSize imageSize = self.size;
 	NSSize outSize = [self sizeByScalingProportionallyToSize:targetSize];
     return outSize.width < imageSize.width? outSize : imageSize;
+}
+
+- (NSImage*)imageByScalingProportionallyUsingNSImage:(float)ratio
+{
+    return [self imageByScalingProportionallyToSizeUsingNSImage: NSMakeSize( self.size.width*ratio, self.size.height*ratio)];
+}
+
+- (NSImage*)imageByScalingProportionallyToSizeUsingNSImage:(NSSize)targetSize
+{
+    @try {
+        NSImage *newImage = [[[NSImage alloc] initWithSize: targetSize] autorelease];
+
+        if( [newImage size].width > 0 && [newImage size].height > 0)
+        {
+            [newImage lockFocus];
+
+            [[NSGraphicsContext currentContext] setImageInterpolation: NSImageInterpolationHigh];
+            
+            NSPoint thumbnailPoint = NSZeroPoint;
+            
+            NSSize imageSize = [self size];
+            float width  = imageSize.width;
+            float height = imageSize.height;
+            float targetWidth  = targetSize.width;
+            float targetHeight = targetSize.height;
+            float scaledWidth  = targetWidth;
+            float scaledHeight = targetHeight;
+            
+            if( NSEqualSizes( imageSize, targetSize) == NO)
+            {
+                float widthFactor  = targetWidth / width;
+                float heightFactor = targetHeight / height;
+                float scaleFactor  = 0.0;
+                
+                
+                if ( widthFactor < heightFactor )
+                    scaleFactor = widthFactor;
+                else
+                    scaleFactor = heightFactor;
+                
+                scaledWidth  = width  * scaleFactor;
+                scaledHeight = height * scaleFactor;
+                
+                if ( widthFactor < heightFactor )
+                    thumbnailPoint.y = (targetHeight - scaledHeight) * 0.5;
+                
+                else if ( widthFactor > heightFactor )
+                    thumbnailPoint.x = (targetWidth - scaledWidth) * 0.5;
+            }
+            
+            NSRect thumbnailRect;
+            thumbnailRect.origin = thumbnailPoint;
+            thumbnailRect.size.width = scaledWidth;
+            thumbnailRect.size.height = scaledHeight;
+
+            [self drawInRect: thumbnailRect
+                           fromRect: NSZeroRect
+                          operation: NSCompositeCopy
+                           fraction: 1.0];
+
+            [newImage unlockFocus];
+            
+            return newImage;
+        }
+    }
+    @catch (NSException *exception) {
+        N2LogException( exception);
+    }
+    return self;
 }
 
 - (NSImage*)imageByScalingProportionallyToSize:(NSSize)targetSize
@@ -254,13 +340,14 @@ end_size_y:
 				NSLog( @"***** imageByScalingProportionallyToSize : targetWidth == 0 || targetHeight == 0");
 			
 			float scaleFactor  = 0.0;
-			float scaledWidth  = targetWidth;
-			float scaledHeight = targetHeight;
+
 			
 			NSPoint thumbnailPoint = NSZeroPoint;
 			
 			if( NSEqualSizes( imageSize, targetSize) == NO)
 			{
+                float scaledWidth  = targetWidth;
+                float scaledHeight = targetHeight;
 				float widthFactor  = targetWidth / width;
 				float heightFactor = targetHeight / height;
 				

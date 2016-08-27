@@ -1,10 +1,16 @@
-//
-//  O2ScreensPrefsView.m
-//  OsiriX_Lion
-//
-//  Created by Alessandro Volz on 03.04.12.
-//  Copyright (c) 2012 OsiriX Team. All rights reserved.
-//
+/*=========================================================================
+ Program:   OsiriX
+ 
+ Copyright (c) OsiriX Team
+ All rights reserved.
+ Distributed under GNU - LGPL
+ 
+ See http://www.osirix-viewer.com/copyright.html for details.
+ 
+ This software is distributed WITHOUT ANY WARRANTY; without even
+ the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ PURPOSE.
+ =========================================================================*/
 
 #import "O2ScreensPrefsView.h"
 #import "NSUserDefaults+OsiriX.h"
@@ -153,10 +159,7 @@
     if (![self isEnabled])
         return;
     
-	BOOL result = NO;
 	NSPoint currentPoint = [theEvent locationInWindow];
-	BOOL mouseIsUp = NO;
-	BOOL done = NO;
 //	BOOL trackContinously = [self startTrackingAt:currentPoint inView:controlView];
 	
     _O2ScreensPrefsViewScreenRecord* record = [self recordAtPoint:[self convertPoint:currentPoint fromView:nil]];

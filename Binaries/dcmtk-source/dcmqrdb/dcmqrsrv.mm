@@ -56,7 +56,6 @@
 
 extern int AbortAssociationTimeOut;
 
-static NSString *globalSync = @"globalSync";
 static int numberOfActiveAssociations = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1459,7 +1458,6 @@ OFCondition DcmQueryRetrieveSCP::waitForAssociation(T_ASC_Network * theNet)
     OFBool go_cleanup = OFFalse;
 	
 	Boolean singleProcess = options_.singleProcess_;
-	Boolean moveProcess = false;
 	
 //    if( secureConnection_)
 //        singleProcess = YES;

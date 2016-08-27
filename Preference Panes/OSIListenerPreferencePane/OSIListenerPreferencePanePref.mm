@@ -13,13 +13,13 @@
 =========================================================================*/
 
 #import "OSIListenerPreferencePanePref.h"
-#import <OsiriXAPI/DefaultsOsiriX.h>
-#import <OsiriXAPI/BrowserController.h>
-#import <OsiriXAPI/NSUserDefaultsController+OsiriX.h>
+#import <DefaultsOsiriX.h>
+#import <BrowserController.h>
+#import <NSUserDefaultsController+OsiriX.h>
 //#import "DDKeychain.h"
 #import <SecurityInterface/SFChooseIdentityPanel.h>
-#import <OsiriXAPI/WebPortal.h>
-#import <OsiriXAPI/WebPortalDatabase.h>
+#import <WebPortal.h>
+#import <WebPortalDatabase.h>
 #import "NSAppleScript+N2.h"
 
 #include <netdb.h>
@@ -79,7 +79,7 @@
 
 	while (addr = (NSString*)[e nextObject])
 	{
-		if ([[addr componentsSeparatedByString:@"."] count] == 4 && ![addr isEqual:@"127.0.0.1"])
+		if ([[addr componentsSeparatedByString:@"."] count] == 4 && ![addr isEqualToString:@"127.0.0.1"])
 		{
 			[r addObject: addr];
 		}
@@ -145,8 +145,12 @@
 - (IBAction)smartAlbumHelpButton: (id)sender
 {
 	if( [sender tag] == 0)
-		[[NSWorkspace sharedWorkspace] openFile:[[NSBundle mainBundle] pathForResource:@"OsiriXTables" ofType:@"pdf"]];
-	
+    {
+        [[NSFileManager defaultManager] removeItemAtPath: @"/tmp/OsiriXTables.pdf" error:nil];
+        [[NSFileManager defaultManager] copyItemAtPath: [[NSBundle mainBundle] pathForResource:@"OsiriXTables" ofType:@"pdf"] toPath: @"/tmp/OsiriXTables.pdf" error: nil];
+		[[NSWorkspace sharedWorkspace] openFile: @"/tmp/OsiriXTables.pdf"];
+	}
+    
 	if( [sender tag] == 1)
 		[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"http://developer.apple.com/documentation/Cocoa/Conceptual/Predicates/Articles/pSyntax.html#//apple_ref/doc/uid/TP40001795"]];
 }
@@ -392,7 +396,7 @@
 			[[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInt:newPort] forKey:@"TLSStoreSCPAEPORT"];
 			
 			NSString *msg = [NSString stringWithFormat:NSLocalizedString( @"The port %d is already use by the standard DICOM Listener. The port %d was automatically chosen instead.", nil), submittedPort, newPort];
-			NSRunAlertPanel(NSLocalizedString(@"Port already in use", nil),  msg, NSLocalizedString(@"OK", nil), nil, nil);
+			NSRunAlertPanel(NSLocalizedString(@"Port already in use", nil),  @"%@", NSLocalizedString(@"OK", nil), nil, nil, msg);
 		}
 	}
 }

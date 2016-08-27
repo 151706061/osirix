@@ -16,15 +16,15 @@
 #import <SecurityInterface/SFCertificateView.h>
 #import "WebPortalUser.h"
 #import "OSIWebSharingPreferencePanePref.h"
-#import <OsiriXAPI/DefaultsOsiriX.h>
-#import <OsiriXAPI/NSUserDefaults+OsiriX.h>
-#import <OsiriXAPI/BrowserController.h>
-#import <OsiriXAPI/AppController.h>
-#import <OsiriXAPI/NSFileManager+N2.h>
-#import <OsiriXAPI/WebPortal.h>
-#import <OsiriXAPI/WebPortalDatabase.h>
-#import <OsiriXAPI/DicomDatabase.h>
-#import <OsiriXAPI/DicomStudy.h>
+#import <DefaultsOsiriX.h>
+#import <NSUserDefaults+OsiriX.h>
+#import <BrowserController.h>
+#import <AppController.h>
+#import <NSFileManager+N2.h>
+#import <WebPortal.h>
+#import <WebPortalDatabase.h>
+#import <DicomDatabase.h>
+#import <DicomStudy.h>
 
 #import "DDKeychain.h"
 
@@ -32,6 +32,28 @@
 //#include <unistd.h>
 //#include <netinet/in.h>
 //#include <arpa/inet.h>
+
+@interface SecondsToMinutesTransformer: NSValueTransformer {}
+@end
+@implementation SecondsToMinutesTransformer
+
++ (BOOL)allowsReverseTransformation {
+    return YES;
+}
+
++ (Class)transformedValueClass {
+    return [NSNumber class];
+}
+
+- (id)transformedValue:(NSNumber*) number {
+    return [NSNumber numberWithInt: (number.integerValue / 60)];
+}
+
+- (id)reverseTransformedValue:(NSNumber*) number
+{
+    return [NSNumber numberWithInt: (number.integerValue * 60)];
+}
+@end
 
 @implementation OSIWebSharingPreferencePanePref
 
@@ -42,7 +64,7 @@
     WebPortalUser *user = [notification object];
     
     if( user == [[userArrayController selectedObjects] lastObject])
-        NSRunInformationalAlertPanel( NSLocalizedString(@"User's name", nil), [NSString stringWithFormat: NSLocalizedString(@"User's name changed. The password has been reset to a new password: %@", nil), user.password], NSLocalizedString(@"OK", nil), nil, nil);
+        NSRunInformationalAlertPanel( NSLocalizedString(@"User's name", nil), NSLocalizedString(@"User's name changed. The password has been reset to a new password: %@", nil), NSLocalizedString(@"OK", nil), nil, nil, user.password);
 }
 
 - (id) initWithBundle:(NSBundle *)bundle
@@ -148,10 +170,10 @@
 
 - (void) dealloc
 {
-    [[NSNotificationCenter defaultCenter] removeObserver: self];
-    
 	NSLog(@"dealloc OSIWebSharingPreferencePanePref");
 	
+    [studiesArrayController removeObserver: self forKeyPath: @"selection"];
+    
 	[super dealloc];
 }
 
@@ -159,12 +181,7 @@
 {
 	[studiesArrayController addObserver: self forKeyPath: @"selection" options:(NSKeyValueObservingOptionNew) context:NULL];
 	
-	
 	[self getTLSCertificate];
-	
-	
-	if( [AppController hasMacOSXSnowLeopard] == NO)
-		NSRunCriticalAlertPanel( NSLocalizedString( @"Unsupported", nil), NSLocalizedString( @"It is highly recommend to upgrade to MacOS 10.6 or higher to use the OsiriX Web Server.", nil), NSLocalizedString( @"OK", nil) , nil, nil);
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -186,13 +203,19 @@
 	
 	[BrowserController currentBrowser].testPredicate = nil;
 	[[BrowserController currentBrowser] outlineViewRefresh];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver: self];
 }
 
 - (IBAction)smartAlbumHelpButton: (id)sender
 {
 	if( [sender tag] == 0)
-		[[NSWorkspace sharedWorkspace] openFile:[[NSBundle mainBundle] pathForResource: @"OsiriXTables" ofType:@"pdf"]];
-	
+    {
+        [[NSFileManager defaultManager] removeItemAtPath: @"/tmp/OsiriXTables.pdf" error:nil];
+        [[NSFileManager defaultManager] copyItemAtPath: [[NSBundle mainBundle] pathForResource:@"OsiriXTables" ofType:@"pdf"] toPath: @"/tmp/OsiriXTables.pdf" error: nil];
+		[[NSWorkspace sharedWorkspace] openFile: @"/tmp/OsiriXTables.pdf"];
+	}
+    
 	if( [sender tag] == 1)
 		[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString: @"http://developer.apple.com/documentation/Cocoa/Conceptual/Predicates/Articles/pSyntax.html#//apple_ref/doc/uid/TP40001795"]];
 
@@ -209,7 +232,7 @@
 		}
 		@catch (NSException * e)
 		{
-			NSRunCriticalAlertPanel( NSLocalizedString(@"Error", nil), [NSString stringWithFormat: NSLocalizedString(@"This filter is NOT working: %@", nil), e], NSLocalizedString(@"OK", nil), nil, nil);
+			NSRunCriticalAlertPanel( NSLocalizedString(@"Error", nil), NSLocalizedString(@"This filter is NOT working: %@", nil), NSLocalizedString(@"OK", nil), nil, nil, e);
 		}
 	}
 }

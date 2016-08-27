@@ -40,19 +40,20 @@
 	if (self = [super init]) {
 		_group = group;
 		_element = element;
-		_name = @"Unknown";
+		_name = [@"Unknown" retain];
 		_vr = nil;
 		NSDictionary *dict = [(NSDictionary *)[DCMTagDictionary sharedTagDictionary] objectForKey:[self stringValue]];
 		if (dict) {
+            [_name release];
 			_name = [[dict objectForKey:@"Description"] retain];
 			_vr = [[dict objectForKey:@"VR"] retain];
 		}
 		
 		if (!_vr)
-			_vr = @"UN";
+			_vr = [@"UN" retain];
 		/*
 		if (![DCMValueRepresentation isValidVR:_vr])
-			_vr = @"UN";
+			_vr = [@"UN" retain];
 		*/
 
 		
@@ -86,10 +87,10 @@
 			_vr =	[(NSString *)CFDictionaryGetValue((CFDictionaryRef)dict, @"VR") retain];
 		}
 		if (!_vr)
-			_vr = @"UN";
+			_vr = [@"UN" retain];
 		/*
 		if (![DCMValueRepresentation isValidVR:_vr])
-			_vr = @"UN";
+			_vr = [@"UN" retain];
 		*/
 	}
 	return self;
@@ -131,9 +132,17 @@
 	return [NSString stringWithFormat:@"%@\t%@\t%@", self.stringValue, _name, _vr];
 }
 
+- (NSString *)readableDescription {
+    
+    if( _name.length > 0)
+        return _name;
+    else
+        return self.stringValue;
+}
+
 - (long)longValue {
-	NSLog(@"long Value for %@:%ld", self.description, (long)_group<<16 + (long)_element&0xffff);
-	return (long)_group<<16 + (long)_element&0xffff;
+	NSLog(@"long Value for %@:%ld", self.description, (long)(_group<<16) + (long)(_element&0xffff));
+	return (long)(_group<<16) + (long)(_element&0xffff);
 }
 
 - (NSComparisonResult)compare:(DCMAttributeTag *)tag {

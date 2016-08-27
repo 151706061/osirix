@@ -122,8 +122,7 @@
 	NSMenu *databaseFieldsMenu = [[prefPane databaseFieldsPopUpButton] menu];
 	[databaseFieldsMenu setAutoenablesItems:NO];
 
-	for (i=0; i<[[databaseFieldsMenu itemArray] count]; i++)
-		[databaseFieldsMenu removeItemAtIndex:i];
+    [databaseFieldsMenu removeAllItems];
 	
 	item = [[[NSMenuItem alloc] init] autorelease];
 	[item setTitle:NSLocalizedString( @"Study level", nil)];
@@ -166,8 +165,7 @@
 	// Specials popup button
 	NSMenu *specialFieldsMenu = [[prefPane specialFieldsPopUpButton] menu];
 
-	for (i=0; i<[[specialFieldsMenu itemArray] count]; i++)
-		[specialFieldsMenu removeItemAtIndex:i];
+    [specialFieldsMenu removeAllItems];
 
 	NSMutableArray *fields = [self specialFieldsTitles];
 	NSMutableArray *localizedFields = [self specialFieldsLocalizedTitles];
@@ -228,12 +226,13 @@
 
 		if([annotationsArray count]==0) annotationNumber = 1;
 		[anAnnotation setTitle:[NSString stringWithFormat:@"%@ %d", [anAnnotation title], annotationNumber++]];
-
-		[self selectAnnotation:anAnnotation];
+        
 		[annotationsArray addObject:anAnnotation];
 		[layoutView addSubview:anAnnotation];
 		[layoutView setNeedsDisplay:YES];
 		[anAnnotation release];
+        
+        [self selectAnnotation:anAnnotation];
 	}
 }
 
@@ -1072,21 +1071,18 @@
 
 - (BOOL)checkAnnotationsContent;
 {
-	int i, a;
-	
 	BOOL check = YES;
 	
 	CIAAnnotation *unfinishedAnnotation;
 	
 	NSArray *content;
-	for (a=0; a<[annotationsArray count]; a++)
+	for (int a=0; a<[annotationsArray count]; a++)
 	{
 		CIAAnnotation *annotation = [annotationsArray objectAtIndex:a];
 		content = [annotation content];
 		
-		for (i=0; i<[content count]; i++)
+		for( NSString *token in content)
 		{
-			NSString *token = [content objectAtIndex:i];
 			if([token isEqualToString:@"DICOM_"] || [token isEqualToString:@"DB_"] || [token isEqualToString:@"Special_"])
 			{
 				check = NO;
@@ -1097,14 +1093,14 @@
 
 	if(!check || [annotationsArray count]==0)
 	{
-		int r = NSRunAlertPanel(NSLocalizedString( @"Annotation Content", nil), NSLocalizedString( @"Some token have no content. Token such as 'DICOM_', 'DB_', 'Special_' will not be displayed.", nil), NSLocalizedString( @"OK", nil), NSLocalizedString( @"Cancel", nil), nil);
-		if(r==NSAlertDefaultReturn)
-			return YES;
-		else
-		{
-			[self selectAnnotation:unfinishedAnnotation];
-			return NO;
-		}
+//		int r = NSRunAlertPanel(NSLocalizedString( @"Annotation Content", nil), NSLocalizedString( @"Some token have no content. Token such as 'DICOM_', 'DB_', 'Special_' will not be displayed.", nil), NSLocalizedString( @"OK", nil), NSLocalizedString( @"Cancel", nil), nil);
+//		if(r==NSAlertDefaultReturn)
+//			return YES;
+//		else
+//		{
+//			[self selectAnnotation:unfinishedAnnotation];
+//			return NO;
+//		}
 	}
 	
 	return YES;
@@ -1116,10 +1112,8 @@
 	
 	BOOL check = YES;
 	
-	int i;
-	for (i=0; i<[content count]; i++)
+	for( NSString *token in content)
 	{
-		NSString *token = [content objectAtIndex:i];
 		if([token isEqualToString:@"DICOM_"] || [token isEqualToString:@"DB_"] || [token isEqualToString:@"Special_"])
 		{
 			check = NO;
@@ -1128,11 +1122,11 @@
 
 	if(!check || [content count]==0)
 	{
-		int r = NSRunAlertPanel(NSLocalizedString( @"Annotation Content", nil), NSLocalizedString( @"Some token have no content. Token such as 'DICOM_', 'DB_', 'Special_' will not be displayed.", nil), NSLocalizedString( @"OK", nil), NSLocalizedString( @"Cancel", nil), nil);
-		if(r==NSAlertDefaultReturn)
-			return YES;
-		else
-			return NO;
+//		int r = NSRunAlertPanel(NSLocalizedString( @"Annotation Content", nil), NSLocalizedString( @"Some token have no content. Token such as 'DICOM_', 'DB_', 'Special_' will not be displayed.", nil), NSLocalizedString( @"OK", nil), NSLocalizedString( @"Cancel", nil), nil);
+//		if(r==NSAlertDefaultReturn)
+//			return YES;
+//		else
+//			return NO;
 	}
 	return YES;
 }

@@ -13,14 +13,14 @@
 =========================================================================*/
 
 #import "OSIDatabasePreferencePanePref.h"
-#import <OsiriXAPI/PluginManager.h>
-#import <OsiriXAPI/BrowserController.h>
-#import <OsiriXAPI/PreferencesWindowController+DCMTK.h>
+#import <PluginManager.h>
+#import <BrowserController.h>
+#import <PreferencesWindowController+DCMTK.h>
 #import <OsiriX/DCMAbstractSyntaxUID.h>
-#import <OsiriXAPI/BrowserControllerDCMTKCategory.h>
+#import <BrowserControllerDCMTKCategory.h>
 #import "DicomDatabase.h"
-#import "dicomFile.h"
 #import "WaitRendering.h"
+#import "dicomFile.h"
 
 @implementation OSIDatabasePreferencePanePref
 
@@ -36,9 +36,39 @@
 		
 		[self setMainView: [mainWindow contentView]];
 		[self mainViewDidLoad];
+        
+        [[NSUserDefaultsController sharedUserDefaultsController] addObserver:self forKeyPath: @"values.eraseEntireDBAtStartup" options: NSKeyValueObservingOptionNew context:nil];
+        [[NSUserDefaultsController sharedUserDefaultsController] addObserver:self forKeyPath: @"values.dbFontSize" options: NSKeyValueObservingOptionNew context:nil];
+        [[NSUserDefaultsController sharedUserDefaultsController] addObserver:self forKeyPath: @"values.horizontalHistory" options: NSKeyValueObservingOptionNew context:nil];
 	}
 	
 	return self;
+}
+
+-(void)observeValueForKeyPath:(NSString*)keyPath ofObject:(id)object change:(NSDictionary*)change context:(void*)context
+{
+	if (object == [NSUserDefaultsController sharedUserDefaultsController])
+    {
+		if ([keyPath isEqualToString:@"values.eraseEntireDBAtStartup" ])
+        {
+            if( [[NSUserDefaults standardUserDefaults] boolForKey: @"eraseEntireDBAtStartup"])
+            {
+                NSRunCriticalAlertPanel( NSLocalizedString( @"Erase Entire Database", nil), NSLocalizedString( @"Warning! With this option, each time OsiriX is restarted, the entire database will be erased. All studies will be deleted. This cannot be undone.", nil), NSLocalizedString( @"OK", nil), nil, nil);
+            }
+        }
+        
+        if ([keyPath isEqualToString:@"values.horizontalHistory" ])
+        {
+            NSRunCriticalAlertPanel( NSLocalizedString( @"Restart", nil), NSLocalizedString( @"Restart OsiriX to apply this change.", nil), NSLocalizedString( @"OK", nil), nil, nil);
+        }
+        
+        if ([keyPath isEqualToString:@"values.dbFontSize"])
+        {
+            [[BrowserController currentBrowser] setTableViewRowHeight];
+            [[BrowserController currentBrowser] refreshMatrix: self];
+            [[[BrowserController currentBrowser] window] display];
+        }
+    }
 }
 
 - (NSArray*) ListOfMediaSOPClassUID // Displayed in DB window
@@ -70,6 +100,9 @@
 {	
 	NSLog(@"dealloc OSIDatabasePreferencePanePref");
 	
+    [[NSUserDefaultsController sharedUserDefaultsController] removeObserver: self forKeyPath: @"values.eraseEntireDBAtStartup"];
+    [[NSUserDefaultsController sharedUserDefaultsController] removeObserver: self forKeyPath: @"values.dbFontSize"];
+    
 	[DICOMFieldsArray release];
 	
 	[super dealloc];
@@ -166,7 +199,6 @@
 	long locationValue = [defaults integerForKey:@"DEFAULT_DATABASELOCATION"];
 	
 	[locationMatrix selectCellWithTag:locationValue];
-	[locationURLField setStringValue:[defaults stringForKey:@"DEFAULT_DATABASELOCATIONURL"]];
 	[locationPathField setURL: [NSURL fileURLWithPath: [defaults stringForKey:@"DEFAULT_DATABASELOCATIONURL"]]];
 	
 //	[copyDatabaseModeMatrix setEnabled:[defaults boolForKey:@"COPYDATABASE"]];
@@ -476,7 +508,6 @@
 			location = [[location stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
 		}
 		
-		[locationURLField setStringValue: location];
 		[locationPathField setURL: [NSURL fileURLWithPath: location]];
 		[[NSUserDefaults standardUserDefaults] setObject:location forKey:@"DEFAULT_DATABASELOCATIONURL"];
 		[[NSUserDefaults standardUserDefaults] setInteger:1 forKey:@"DEFAULT_DATABASELOCATION"];
@@ -484,7 +515,6 @@
 	}	
 	else 
 	{
-		[locationURLField setStringValue: 0L];
 		[locationPathField setURL: 0L];
 		[[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"DEFAULT_DATABASELOCATIONURL"];
 		[[NSUserDefaults standardUserDefaults] setInteger:0 forKey:@"DEFAULT_DATABASELOCATION"];

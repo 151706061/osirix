@@ -31,15 +31,17 @@ NSString* N2ConnectionListenerOpenedConnection = @"N2ConnectionListenerOpenedCon
 	NSString* address = NULL;
 	if (addr) {
 		struct sockaddr* sa = (struct sockaddr*)[addr bytes];
-		size_t len = 32;
-		char tmp[len];
 		switch (sa->sa_family) {
 			case AF_INET: {
+                size_t len = INET_ADDRSTRLEN;
+                char tmp[len];
 				struct sockaddr_in* sain = (struct sockaddr_in*)sa;
 				inet_ntop(sa->sa_family, &sain->sin_addr.s_addr, tmp, len);
 				address = [NSString stringWithUTF8String:tmp];
 			} break;
 			case AF_INET6: {
+                size_t len = INET6_ADDRSTRLEN;
+                char tmp[len];
 				struct sockaddr_in6* sain6 = (struct sockaddr_in6*)sa;
 				inet_ntop(sa->sa_family, &sain6->sin6_addr, tmp, len);
 				address = [NSString stringWithUTF8String:tmp];
@@ -131,8 +133,10 @@ static void accept(CFSocketRef socket, CFSocketCallBackType type, CFDataRef addr
 	ipv4socket = CFSocketCreate(kCFAllocatorDefault, PF_INET, SOCK_STREAM, IPPROTO_TCP, kCFSocketAcceptCallBack, (CFSocketCallBack)&accept, &socketCtxt);
 	ipv6socket = CFSocketCreate(kCFAllocatorDefault, PF_INET6, SOCK_STREAM, IPPROTO_TCP, kCFSocketAcceptCallBack, (CFSocketCallBack)&accept, &socketCtxt);
 	if (!ipv4socket || !ipv6socket)
+    {
+        [self autorelease];
 		[NSException raise:NSGenericException format:@"Could not create listening sockets."];
-	
+	}
 	int yes = 1;
 	setsockopt(CFSocketGetNative(ipv4socket), SOL_SOCKET, SO_REUSEADDR, (void *)&yes, sizeof(yes));
 	setsockopt(CFSocketGetNative(ipv6socket), SOL_SOCKET, SO_REUSEADDR, (void *)&yes, sizeof(yes));
@@ -152,6 +156,7 @@ static void accept(CFSocketRef socket, CFSocketCallBackType type, CFDataRef addr
 		if (ipv6socket) CFRelease(ipv6socket);
 		ipv4socket = NULL;
 		ipv6socket = NULL;
+        [self autorelease];
 		return nil;
 	}
 	
@@ -177,6 +182,7 @@ static void accept(CFSocketRef socket, CFSocketCallBackType type, CFDataRef addr
 		if (ipv6socket) CFRelease(ipv6socket);
 		ipv4socket = NULL;
 		ipv6socket = NULL;
+        [self autorelease];
 		return nil;
 	}
 	
@@ -204,8 +210,11 @@ static void accept(CFSocketRef socket, CFSocketCallBackType type, CFDataRef addr
 	CFSocketContext socketCtxt = {0, self, NULL, NULL, NULL};
 	ipv4socket = CFSocketCreate(kCFAllocatorDefault, PF_LOCAL, SOCK_STREAM, IPPROTO_IP, kCFSocketAcceptCallBack, (CFSocketCallBack)&accept, &socketCtxt);
 	if (!ipv4socket)
+    {
+        [self autorelease];
 		[NSException raise:NSGenericException format:@"Could not create listening socket."];
-	
+	}
+    
 	int yes = 1;
 	setsockopt(CFSocketGetNative(ipv4socket), SOL_SOCKET, SO_REUSEADDR, (void *)&yes, sizeof(yes));
 	
@@ -222,7 +231,8 @@ static void accept(CFSocketRef socket, CFSocketCallBackType type, CFDataRef addr
 		if (ipv6socket) CFRelease(ipv6socket);
 		ipv4socket = NULL;
 		ipv6socket = NULL;
-		return NO;
+        [self autorelease];
+		return nil;
 	}
 	
 	// set up the run loop sources for the sockets

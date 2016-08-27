@@ -18,7 +18,7 @@
 @class ViewerController;
 
 /** \brief Window Controller for DICOM printing */
-@interface AYDicomPrintWindowController : NSWindowController
+@interface AYDicomPrintWindowController : NSWindowController <NSWindowDelegate>
 {
 	NSImage *m_PrinterOnImage;
 	NSImage *m_PrinterOffImage;
@@ -46,6 +46,10 @@
 	IBOutlet NSTextField	*m_VersionNumberTextField;
 	
 	NSLock					*printing;
+    
+    NSRect windowFrameToRestore;
+    BOOL scaleFitToRestore;
+
 }
 + (void) updateAllPreferencesFormat;
 

@@ -1,6 +1,8 @@
 %INCLUDE:header.pvt.html%
 <div id="subheader">
-	<a class="back" href="%X:backLink%?%Info.getParameters(xid=)%">%X:ZWS:BackLinkLabel%</a>
+    %[IF:!Session.dontDisplayBack%
+	<a class="back" href="../main">Home</a> %[IF:backLink=="main"%%ELSE:backLink=="main"%<a class="back" href="%X:backLink%?%Info.getParameters(xid=)%">%X:ZWS:BackLinkLabel%</a>%]IF:backLink=="main"%
+    %]IF:!Session.dontDisplayBack%
 </div>
 
 <script type="text/javascript" language="javascript">
@@ -20,15 +22,18 @@ function uncheckAll(form) {
 function checkboxChanged(form) {
 	var allChecked = true;
 	var allUnchecked = true;
+	
+	if( form.selected) {
 	for (var i = 0; i < form.selected.length; i++) {
 		if (allChecked && !form.selected[i].checked) allChecked = false;
 		if (allUnchecked && form.selected[i].checked) allUnchecked = false;
 	}
+	}
 	
-	form.CheckAll.disabled = allChecked;
-	form.UncheckAll.disabled = allUnchecked;
+	if( form.CheckAll) form.CheckAll.disabled = allChecked;
+	if( form.UncheckAll) form.UncheckAll.disabled = allUnchecked;
 	
-	var ifs = $('.if_selection');
+	var ifs = form.getElementsByClassName('if_selection');
 	for (var i = 0; i < ifs.length; ++i) {
 		ifs[i].disabled = allUnchecked;
 		if (ifs[i].classList) {
@@ -42,16 +47,13 @@ function checkboxChanged(form) {
 
 function onSubmitForm(form) {
 	if (document.submitting == 'Weasis')
-		form.action ="weasis.jnlp";
-	else
-        form.action = document.location;
-    
-    if (document.submitting == 'delete')
-        form.message.value = 'delete';
-	else if (form.message.value == form.message.defaultValue)
-		form.message.value = '';
-	
-    return true;
+		form.action ="%X:Study.name%-weasis.jnlp";
+	else form.action = document.location;
+	if( form.message) {
+		if (form.message.value == form.message.defaultValue)
+			form.message.value = '';
+	}
+	return true;
 }
 
 function imageClick(ixid, sxid) {
@@ -68,7 +70,6 @@ function shareDestinationChange(select) {
 
 </script>
 
-<form id="form" method="post" onsubmit="return onSubmitForm(this);">
 <div id="content">
 	%INCLUDE:/errors.pvt.html%
 	%INCLUDE:/messages.pvt.html%
@@ -77,7 +78,10 @@ function shareDestinationChange(select) {
 	<div>
 		<div class="title">Study Information</div>
 		<div>
+			<form id="formComparative" method="post" onsubmit="return onSubmitForm(this);">
 			<table class="form">
+                <col width="250">
+                <col width="99%">
 				<tr>
 					<td>Patient's&nbsp;name:</td>
 					<td>%X:Study.name%</td>
@@ -139,15 +143,38 @@ function shareDestinationChange(select) {
                 %]IF:Info.proposeReport%
 				%[IF:Study.otherStudiesForThisPatient.count%
 				<tr>
-					<td>Other&nbsp;Studies&nbsp;for&nbsp;this&nbsp;patient:</td>
+					<td><b>Other&nbsp;Studies&nbsp;for&nbsp;this&nbsp;patient:</b></td>
 				</tr>
 				%[FOREACH:Study.otherStudiesForThisPatient:ComparativeStudy%
-					<td>%ComparativeStudy.date.DateTime.Spanned%:</td>
 					<td>
-                        <script type="text/javascript" language="javascript">
-							if( "%ComparativeStudy.studyInstanceUID%" == "%Study.studyInstanceUID%") document.write( "<b>");
-                            else document.write( "<a href=\"study?%Info.getParameters(xid=)%&xid=%ComparativeStudy.XID%\">");
-                        </script>
+						%[IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%<b>%]IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+						%ComparativeStudy.date.DateTime.Spanned%:
+						%[IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%</b>%]IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+					</td>
+					<td>
+						%[IF:Info.proposeWeasis%
+                        <input type="checkbox" class="checkbox" name="selected" value="%ComparativeStudy.XID%" onchange="checkboxChanged(this.form)" %[IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%checked="checked"%]IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID% />
+                        %]IF:Info.proposeWeasis%
+                        
+                        %[IF:Info.isMacOS%
+                        %[IF:Info.proposeWADORetrieve%
+                            <a href="osirix://?methodName=DownloadURL&Display=YES&URL='%Info.WADOBaseURL%?requestType=WADO&studyUID=%U:ComparativeStudy.studyInstanceUID%&token=%Info.newToken%'"><img src="images/osirixSmall.png" style="vertical-align:middle"/></a>
+                        %]IF:Info.proposeWADORetrieve%
+                        %]IF:Info.isMacOS%
+                   
+                        %[IF:Info.proposeZipDownload%
+                            <a href="%U:ComparativeStudy.name% - %U:ComparativeStudy.studyName%.%[IF:Info.isMacOS%osirixzip%ELSE:Info.isMacOS%zip%]IF:Info.isMacOS%?xid=%ComparativeStudy.XID%"><img src="images/downloadSmall.png" style="vertical-align:middle"/></a>
+                        %]IF:Info.proposeZipDownload%
+                    
+                        %[IF:Info.proposeWeasis%
+                            <a href="/%X:ComparativeStudy.name%-%X:ComparativeStudy.studyName%-weasis.jnlp?xid=%ComparativeStudy.XID%"><img src="images/weasisSmall.png" style="vertical-align:middle"/></a>
+                        %]IF:Info.proposeWeasis%
+					
+                        %[IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+                        <b>
+                        %ELSE:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+                        <a href="study?%Info.getParameters(xid=)%&xid=%ComparativeStudy.XID%">
+                        %]IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
                         
 						<span class="bigger compressed">%X:ZWS:ComparativeStudy.studyName%</span> <span class="gray details">, %X:ComparativeStudy.modality%%[IF:ComparativeStudy.imageSeries.count%, %X:ComparativeStudy.imageSeries.count% series%]IF:ComparativeStudy.imageSeries.count%%[IF:ComparativeStudy.patientID%, %X:ComparativeStudy.patientID%%]IF:ComparativeStudy.patientID%%[IF:ComparativeStudy.accessionNumber%, %X:ComparativeStudy.accessionNumber%%]IF:ComparativeStudy.accessionNumber%</span>
 						<div class="gray indent compressed">
@@ -157,16 +184,41 @@ function shareDestinationChange(select) {
                         <div class="gray indent compressed">
                         </div>
                         
-                        <script type="text/javascript" language="javascript">
-							if( "%ComparativeStudy.studyInstanceUID%" > "%Study.studyInstanceUID%") document.write( "</b>");
-                            else document.write( "</a>");
-                        </script>
-                        
+                        %[IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+                        </b>
+                        %ELSE:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
+                        </a>
+                        %]IF:ComparativeStudy.studyInstanceUID==Study.studyInstanceUID%
 					</td>
 				</tr>
 				%]FOREACH:Study.otherStudiesForThisPatient:ComparativeStudy%
+                
+                
+                %[IF:Study.otherStudiesForThisPatient.count>1%
+				%[IF:Info.proposeDicomSend||Info.proposeWeasis%
+				<tr>
+                    <td>
+                        Selection:
+                    </td>
+                    
+<!--                    <td>
+						<button type="button" name="CheckAll" onclick="checkAll(this.form)">Tout</button>
+						<button type="button" name="UncheckAll" onclick="uncheckAll(this.form)">Aucun</button>
+					</td>
+-->      
+                    
+                    <td>
+					%[IF:Info.proposeWeasis%
+						<input type="image" src="images/weasisSmall.png" alt="Open selected series in Weasis" onclick="document.submitting='Weasis'" class="if_selection" />
+					%]IF:Info.proposeWeasis%
+                    </td>
+				</tr>
+				%]IF:Info.proposeDicomSend||Info.proposeWeasis%
+				%]IF:Study.otherStudiesForThisPatient.count>1%
+                
 				%]IF:Study.otherStudiesForThisPatient.count%
 			</table>
+			</form>
 		</div>
 		
 		%[IF:Study.hasKeyImagesOrROIImages%
@@ -187,15 +239,39 @@ function shareDestinationChange(select) {
 		%]IF:Study.hasKeyImagesOrROIImages%
 		
 		<div class="separated title">Series</div>
+        <form id="form" method="post" onsubmit="return onSubmitForm(this);">
 		<div class="noleftmargin">
 			<table class="wide fat">
 				%[FOREACH:Series:Series%
 					<tr class="li%X:Series_Index2%">
 						%[IF:Info.proposeDicomSend||Info.proposeWeasis||Info.proposeWADORetrieve||Info.proposeDelete%
+                        %[IF:Study.imageSeries.count>1%
 						<td class="narrow fat">
 							<input type="checkbox" class="checkbox" name="selected" value="%Series.XID%" onchange="checkboxChanged(this.form)" %[IF:Series.isSelected%checked="checked"%]IF:Series.isSelected% />
 						</td>
+                        %]IF:Study.imageSeries.count>1%
 						%]IF:Info.proposeDicomSend||Info.proposeWeasis||Info.proposeWADORetrieve||Info.proposeDelete%
+                        
+                        %[IF:Info.isMacOS||Info.isIOS%
+						%[IF:Info.proposeWADORetrieve%
+						<td class="narrow middle">
+							<a href="osirix://?methodName=DownloadURL&Display=YES&URL='%Info.WADOBaseURL%?requestType=WADO&studyUID=%U:Study.studyInstanceUID%&seriesUID=%U:Series.seriesDICOMUID%&token=%Info.newToken%'"><img src="images/osirix.png"/></a>
+						</td>
+						%]IF:Info.proposeWADORetrieve%
+						%]IF:Info.isMacOS||Info.isIOS%
+                        
+                        %[IF:Info.proposeZipDownload%
+						<td class="narrow middle">
+							<a href="%U:Study.name% - %U:Series.name%.%[IF:Info.isMacOS%osirixzip%ELSE:Info.isMacOS%zip%]IF:Info.isMacOS%?xid=%Series.XID%"><img src="images/download.png"/></a>
+						</td>
+                        %]IF:Info.proposeZipDownload%
+
+						%[IF:Info.proposeWeasis%
+						<td class="narrow middle">
+                            <a href="/%X:Study.name%-weasis.jnlp?xid=%Series.XID%"><img src="images/weasis.png"/></a>
+						</td>
+						%]IF:Info.proposeWeasis%
+                        
 						<td class="narrow middle center">
 							%[IF:Series.noFiles>9%
 							<a href="series%Series.seriesExtension%?xid=%Series.XID%&%Info.getParameters(xid=)%">
@@ -205,6 +281,7 @@ function shareDestinationChange(select) {
 								<img src="/thumbnail?xid=%Series.XID%" />
 							</a>
 						</td>
+                        
 						<td class="fat">
 							%[IF:Series.noFiles>9%
 							<a href="series%Series.seriesExtension%?xid=%Series.XID%&%Info.getParameters(xid=)%">
@@ -228,48 +305,17 @@ function shareDestinationChange(select) {
 								</span>
 							</a>
 						</td>
-						
-						%[IF:Info.isMacOS||Info.isIOS%
-						%[IF:Info.proposeWADORetrieve%
-						<td class="narrow middle">
-							<a href="osirix://?methodName=DownloadURL&Display=YES&URL='%Info.WADOBaseURL%?requestType=WADO&studyUID=%U:Study.studyInstanceUID%&seriesUID=%U:Series.seriesDICOMUID%&token=%Info.newToken%'"><img src="images/osirix.png"/></a>
-						</td>
-						%]IF:Info.proposeWADORetrieve%
-						%]IF:Info.isMacOS||Info.isIOS%
-                        
-                        %[IF:Info.proposeZipDownload%
-						<td class="narrow middle">
-							<a href="%U:Study.name% - %U:Series.name%.%[IF:Info.isMacOS%osirixzip%ELSE:Info.isMacOS%zip%]IF:Info.isMacOS%?xid=%Series.XID%"><img src="images/download.png"/></a>
-						</td>
-                        %]IF:Info.proposeZipDownload%
-                        
-						%[IF:Info.proposeWeasis%
-						<td class="narrow middle">
-								<a href="/%X:Study.name%-weasis.jnlp?xid=%Series.XID%"><img src="images/weasis.png"/></a>
-						</td>
-						%]IF:Info.proposeWeasis%
 					</tr>
 				%]FOREACH:Series:Series%
-	
+
 				%[IF:Series.count>1%
 				%[IF:Info.proposeDicomSend||Info.proposeWeasis%
 				<tr>
-					<td colspan="3">
-						<button type="button" name="CheckAll" onclick="checkAll(this.form)">Check All</button>
-						<button type="button" name="UncheckAll" onclick="uncheckAll(this.form)">Uncheck All</button>
+					<td>
+						<button type="button" name="CheckAll" onclick="checkAll(this.form)">All</button>
+						<button type="button" name="UncheckAll" onclick="uncheckAll(this.form)">None</button>
 					</td>
                     
-					%[IF:Info.proposeZipDownload%
-					<td>
-					</td>
-					%]IF:Info.proposeZipDownload%
-					%[IF:Info.isMacOS%
-					%[IF:Info.proposeWADORetrieve%
-					<td class="narrow middle">
-						<a href="osirix://?methodName=DownloadURL&Display=YES&URL='%Info.WADOBaseURL%?requestType=WADO&studyUID=%U:Study.studyInstanceUID%&token=%Info.newToken%'"><img src="images/osirix.png"/></a>
-					</td>
-					%]IF:Info.proposeWADORetrieve%
-					%]IF:Info.isMacOS%
 					%[IF:Info.proposeWeasis%
 					<td class="narrow middle">
 						<input type="image" src="images/weasis.png" alt="Open selected series in Weasis" onclick="document.submitting='Weasis'" class="if_selection" />
@@ -278,10 +324,13 @@ function shareDestinationChange(select) {
 				</tr>
 				%]IF:Info.proposeDicomSend||Info.proposeWeasis%
 				%]IF:Series.count>1%
+
 			</table>
 		</div>
+        </form>
 	
 		%[IF:Info.proposeShare&&ShareDestinations.count%
+        <form id="form" method="post" onsubmit="return onSubmitForm(this);">
 		<div class="title separated">Share</div>
 		<div>
 			<table class="basic wide form">
@@ -340,9 +389,11 @@ function shareDestinationChange(select) {
 				</tr>
 			</table>
 		</div>
+        </form>
 		%]IF:Info.proposeShare&&ShareDestinations.count%
 	
 		%[IF:Info.proposeDicomSend%
+        <form id="form" method="post" onsubmit="return onSubmitForm(this);">
 		<div class="title separated">DICOM Transfer</div>
 		<div>
 			<table class="form">
@@ -359,12 +410,11 @@ function shareDestinationChange(select) {
 				</tr>
 			</table>
 		</div>
+        </form>
 		%]IF:Info.proposeDicomSend%
 	</div>
 	%]IF:Study%
 </div>
-</form>
-
 <script type="text/javascript" language="javascript">
 	checkboxChanged(document.getElementById('form'));
 </script>
